@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   ChevronRight,
-  Database,
   Hash,
   Layers,
   Sparkles,
@@ -46,13 +45,6 @@ const quickLinks = [
     icon: <Hash className="w-5 h-5" />,
     badge: 'Numeric',
   },
-  {
-    to: '/bulk-csv',
-    title: 'Bulk CSV',
-    description: 'Upload a list and generate outputs at scale.',
-    icon: <Database className="w-5 h-5" />,
-    badge: 'Batch',
-  },
 ];
 
 export const HomePage = () => {
@@ -70,7 +62,8 @@ export const HomePage = () => {
             Generate professional email permutations on dedicated pages
           </h2>
           <p className="mt-3 text-sm md:text-base text-slate-200 max-w-2xl">
-            Pick one focused converter or run all patterns. Each section has its own route, export flow, and clean UI
+            Pick one focused converter or run all patterns. Each menu page supports manual input and bulk CSV upload
+            with its own export flow and clean UI
             for Vercel-hosted sharing.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -82,10 +75,10 @@ export const HomePage = () => {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              to="/bulk-csv"
+              to="/middle-name"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/30 bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-all"
             >
-              Open Bulk CSV
+              Open Any Code Menu
             </Link>
           </div>
         </div>

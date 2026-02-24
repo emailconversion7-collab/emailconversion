@@ -8,7 +8,6 @@ const navItems = [
   { to: '/initial-based', label: 'Initial Based' },
   { to: '/common-human-choice', label: 'Common Human Choice' },
   { to: '/short-number', label: 'Short Number' },
-  { to: '/bulk-csv', label: 'Bulk CSV' },
 ];
 
 export const AppLayout = () => {

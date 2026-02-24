@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
-import { BulkCsvPage } from './pages/BulkCsvPage';
 import { HomePage } from './pages/HomePage';
 import {
   AllPatternsPage,
@@ -20,7 +19,6 @@ export default function App() {
         <Route path="/initial-based" element={<InitialBasedPage />} />
         <Route path="/common-human-choice" element={<CommonHumanChoicePage />} />
         <Route path="/short-number" element={<ShortNumberPage />} />
-        <Route path="/bulk-csv" element={<BulkCsvPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

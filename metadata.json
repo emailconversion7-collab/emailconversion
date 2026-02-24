@@ -1,0 +1,5 @@
+{
+  "name": "Email Permutation Generator",
+  "description": "Generate professional and common email variations based on name and domain.",
+  "requestFramePermissions": []
+}

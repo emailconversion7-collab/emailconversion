@@ -88,16 +88,6 @@ const getMappedLabel = (headers: string[], index: number) => {
   return header || `column_${index + 1}`;
 };
 
-const toSelectedMapping = (
-  mapping: { firstName: number; middleName: number; lastName: number; dateOfBirth: number; domain: number; email: number }
-): ColumnMappingSelection => ({
-  firstName: mapping.firstName >= 0 ? mapping.firstName : undefined,
-  middleName: mapping.middleName >= 0 ? mapping.middleName : undefined,
-  lastName: mapping.lastName >= 0 ? mapping.lastName : undefined,
-  dateOfBirth: mapping.dateOfBirth >= 0 ? mapping.dateOfBirth : undefined,
-  domain: mapping.domain >= 0 ? mapping.domain : undefined,
-});
-
 const useInputs = () => {
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -228,11 +218,16 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
     try {
       const text = await file.text();
       const parsed = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
-      const selectedMapping = toSelectedMapping(parsed.mapping);
 
       setBulkCsvText(text);
       setBulkHeaders(parsed.sourceHeaders);
-      setBulkMapping(selectedMapping);
+      setBulkMapping({
+        firstName: undefined,
+        middleName: undefined,
+        lastName: undefined,
+        dateOfBirth: undefined,
+        domain: undefined,
+      });
       setBulkStatus('File uploaded. Review mapping and click Generate.');
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : 'Failed to process CSV file.');
@@ -368,7 +363,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!bulkMapping.firstName) {
+                      if (bulkMapping.firstName === undefined) {
                         setBulkError('Please select the First Name column.');
                         return;
                       }

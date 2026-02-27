@@ -154,9 +154,11 @@ export const parseBulkInputCsv = (
     )
   );
 
+  const isManualMappingMode = selectedMapping !== undefined;
   const resolveMappedIndex = (selectedIndex: number | undefined, autoIndex: number) => {
-    if (selectedIndex === undefined || selectedIndex < 0) return autoIndex;
-    return selectedIndex;
+    if (selectedIndex !== undefined && selectedIndex >= 0) return selectedIndex;
+    if (isManualMappingMode) return -1;
+    return autoIndex;
   };
 
   const mappedFirstNameIndex = resolveMappedIndex(selectedMapping?.firstName, firstNameIndex);

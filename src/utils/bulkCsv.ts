@@ -12,9 +12,18 @@ export type GeneratedSections = Record<PatternKey, string[]>;
 export interface ParsedBulkInput {
   rows: BulkInputRow[];
   sourceHeaders: string[];
+  mapping: {
+    firstName: number;
+    middleName: number;
+    lastName: number;
+    dateOfBirth: number;
+    domain: number;
+    email: number;
+  };
 }
 
 const normalizeHeader = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const sanitizeCell = (value: string) => value.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
 
 const matchesHeader = (header: string, aliases: string[], containsTokens: string[] = []) => {
   if (aliases.includes(header)) return true;
@@ -74,7 +83,25 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
   }
 
   const delimiter = pickDelimiter(lines[0]);
-  const sourceHeaders = parseCsvLine(lines[0], delimiter).map((header) => header.trim());
+  const rawHeaders = parseCsvLine(lines[0], delimiter).map((header) => sanitizeCell(header));
+  const rawRowValues = lines.slice(1).map((line) => parseCsvLine(line, delimiter));
+  const maxColumnCount = Math.max(
+    rawHeaders.length,
+    ...rawRowValues.map((values) => values.length)
+  );
+
+  const keepIndexes: number[] = [];
+  for (let index = 0; index < maxColumnCount; index += 1) {
+    const headerValue = sanitizeCell(rawHeaders[index] ?? '');
+    const hasAnyData = rawRowValues.some((values) => sanitizeCell(values[index] ?? '') !== '');
+    if (headerValue !== '' || hasAnyData) keepIndexes.push(index);
+  }
+
+  const sourceHeaders = keepIndexes.map((index) => {
+    const headerValue = sanitizeCell(rawHeaders[index] ?? '');
+    if (headerValue) return headerValue;
+    return `extra_column_${index + 1}`;
+  });
   const headers = sourceHeaders.map(normalizeHeader);
 
   const firstNameIndex = headers.findIndex((h) =>
@@ -120,15 +147,15 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
     )
   );
 
-  if (firstNameIndex === -1 || lastNameIndex === -1) {
-    throw new Error('CSV headers must include First Name and Last Name columns.');
+  if (firstNameIndex === -1) {
+    throw new Error('CSV headers must include a First Name column.');
   }
 
   const rows: BulkInputRow[] = [];
 
-  for (let i = 1; i < lines.length; i += 1) {
-    const values = parseCsvLine(lines[i], delimiter);
-    const sourceValues = sourceHeaders.map((_, index) => values[index]?.trim() ?? '');
+  rawRowValues.forEach((rawValues) => {
+    const values = keepIndexes.map((index) => sanitizeCell(rawValues[index] ?? ''));
+    const sourceValues = values;
     const firstName = values[firstNameIndex]?.trim() ?? '';
     const middleName = middleNameIndex >= 0 ? values[middleNameIndex]?.trim() ?? '' : '';
     const lastName = values[lastNameIndex]?.trim() ?? '';
@@ -138,16 +165,27 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
     const emailDomain = emailValue.includes('@') ? emailValue.split('@').pop()?.trim() ?? '' : '';
     const domain = explicitDomain || emailDomain || fallbackDomain;
 
-    if (!firstName || !lastName || !domain) continue;
-
-    rows.push({ firstName, middleName, lastName, dateOfBirth, domain, sourceValues });
-  }
+    if (firstName && domain) {
+      rows.push({ firstName, middleName, lastName, dateOfBirth, domain, sourceValues });
+    }
+  });
 
   if (rows.length === 0) {
-    throw new Error('No valid rows found. Check that First Name and Last Name values are present.');
+    throw new Error('No valid rows found. Check that First Name and Domain values are present.');
   }
 
-  return { rows, sourceHeaders };
+  return {
+    rows,
+    sourceHeaders,
+    mapping: {
+      firstName: firstNameIndex,
+      middleName: middleNameIndex,
+      lastName: lastNameIndex,
+      dateOfBirth: dateOfBirthIndex,
+      domain: domainIndex,
+      email: emailIndex,
+    },
+  };
 };
 
 export const buildBulkOutputCsv = (

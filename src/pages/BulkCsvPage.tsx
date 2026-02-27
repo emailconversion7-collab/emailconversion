@@ -35,6 +35,12 @@ export const BulkCsvPage = () => {
     rowCount: number;
   } | null>(null);
 
+  const getMappedLabel = (headers: string[], index: number) => {
+    if (index < 0) return 'Not mapped';
+    const header = headers[index]?.trim() ?? '';
+    return header || `column_${index + 1}`;
+  };
+
   const generateForRow = (row: BulkInputRow) => ({
     middleName: generateMiddleNameEmails(row.firstName, row.middleName, row.lastName, row.domain),
     initialBased: generateInitialBasedEmails(row.firstName, row.middleName, row.lastName, row.domain),
@@ -53,7 +59,7 @@ export const BulkCsvPage = () => {
 
     try {
       const text = await file.text();
-      const { rows: inputRows, sourceHeaders } = parseBulkInputCsv(text, domain);
+      const { rows: inputRows, sourceHeaders, mapping } = parseBulkInputCsv(text, domain);
       const all = buildBulkOutputCsv(inputRows, sourceHeaders, generateForRow);
       const middleNameCsv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'middleName', 'Middle Name');
       const initialBasedCsv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'initialBased', 'Initial Based');
@@ -88,7 +94,9 @@ export const BulkCsvPage = () => {
         rowCount: inputRows.length,
       });
 
-      setBulkStatus(`Processed ${inputRows.length} row(s), generated ${allCount} emails.`);
+      setBulkStatus(
+        `Processed ${inputRows.length} row(s), generated ${allCount} emails. Mapping: first=${getMappedLabel(sourceHeaders, mapping.firstName)}, last=${getMappedLabel(sourceHeaders, mapping.lastName)}, middle=${getMappedLabel(sourceHeaders, mapping.middleName)}, dob=${getMappedLabel(sourceHeaders, mapping.dateOfBirth)}, domain=${getMappedLabel(sourceHeaders, mapping.domain)}.`
+      );
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : 'Failed to process CSV file.');
     } finally {
@@ -113,7 +121,7 @@ export const BulkCsvPage = () => {
           />
 
           <p className="text-xs text-slate-500 leading-relaxed my-3">
-            Upload CSV with headers: First Name/F/fname, Middle Name/M (optional), Last Name/L/lname, Domain/D (optional).
+            Upload CSV with headers: First Name/F/fname (required), Middle Name/M (optional), Last Name/L/lname (optional), Date of Birth/DOB (optional), Domain/D (optional if fallback is set).
           </p>
           <label className="w-full inline-flex items-center justify-center px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer transition-all">
             Upload CSV
@@ -148,17 +156,18 @@ export const BulkCsvPage = () => {
             <div className="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
               <p className="text-sm font-semibold text-slate-800 mb-2">CSV Format</p>
               <p className="text-xs text-slate-600 mb-2">
-                Required headers: <span className="font-semibold">f</span> (first name),{' '}
-                <span className="font-semibold">l</span> (last name)
+                Required headers: <span className="font-semibold">f</span> (first name)
               </p>
               <p className="text-xs text-slate-600 mb-2">
-                Optional headers: <span className="font-semibold">m</span> (middle name),{' '}
+                Optional headers: <span className="font-semibold">l</span> (last name),{' '}
+                <span className="font-semibold">m</span> (middle name),{' '}
+                <span className="font-semibold">dob</span> (date of birth),{' '}
                 <span className="font-semibold">d</span> (domain)
               </p>
               <pre className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-3 overflow-x-auto">
-f,m,l,d{`\n`}
-rahul,kumar,sharma,gmail.com{`\n`}
-riya,,kapoor,yahoo.com
+f,m,l,dob,d{`\n`}
+rahul,kumar,sharma,1996-04-17,gmail.com{`\n`}
+riya,,,,
               </pre>
             </div>
           )}

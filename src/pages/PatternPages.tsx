@@ -81,6 +81,12 @@ const buildGeneratorOutput = (row: BulkInputRow): GeneratedSections => ({
   tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
 });
 
+const getMappedLabel = (headers: string[], index: number) => {
+  if (index < 0) return 'Not mapped';
+  const header = headers[index]?.trim() ?? '';
+  return header || `column_${index + 1}`;
+};
+
 const useInputs = () => {
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -126,7 +132,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
 
   const generated = useMemo(() => {
     const { firstName, middleName, lastName, domain, dateOfBirth } = inputs;
-    if (!firstName || !lastName || !domain) return null;
+    if (!firstName || !domain) return null;
 
     return buildGeneratorOutput({ firstName, middleName, lastName, domain, dateOfBirth });
   }, [inputs.firstName, inputs.middleName, inputs.lastName, inputs.domain, inputs.dateOfBirth]);
@@ -157,7 +163,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
 
     try {
       const text = await file.text();
-      const { rows: inputRows, sourceHeaders } = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
+      const { rows: inputRows, sourceHeaders, mapping } = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
 
       const counts: BulkDownloads['counts'] = {
         all: 0,
@@ -191,7 +197,9 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
         counts,
         rowCount: inputRows.length,
       });
-      setBulkStatus(`Processed ${inputRows.length} row(s), generated ${counts.all} emails.`);
+      setBulkStatus(
+        `Processed ${inputRows.length} row(s), generated ${counts.all} emails. Mapping: first=${getMappedLabel(sourceHeaders, mapping.firstName)}, last=${getMappedLabel(sourceHeaders, mapping.lastName)}, middle=${getMappedLabel(sourceHeaders, mapping.middleName)}, dob=${getMappedLabel(sourceHeaders, mapping.dateOfBirth)}, domain=${getMappedLabel(sourceHeaders, mapping.domain)}.`
+      );
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : 'Failed to process CSV file.');
     } finally {
@@ -245,7 +253,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
               />
               <p className="text-xs text-slate-500 leading-relaxed mt-3 mb-3">
-                Upload CSV with headers: First Name/F/fname, Middle Name/M (optional), Last Name/L/lname, Date of Birth/DOB (optional), Domain/D (optional).
+                Upload CSV with headers: First Name/F/fname (required), Middle Name/M (optional), Last Name/L/lname (optional), Date of Birth/DOB (optional), Domain/D (optional if fallback is set).
               </p>
               <label className="w-full inline-flex items-center justify-center px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer transition-all">
                 <Upload className="w-4 h-4 mr-2" />
@@ -306,7 +314,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-white rounded-3xl border-2 border-dashed border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-900">Ready to generate</h3>
-                <p className="text-slate-500 max-w-xs mt-2">Enter first name, last name, and domain to see results.</p>
+                <p className="text-slate-500 max-w-xs mt-2">Enter first name and domain to see results. Last and middle names are optional.</p>
               </div>
             )}
           </>
@@ -320,11 +328,11 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                 <div className="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <p className="text-sm font-semibold text-slate-800 mb-2">CSV Format</p>
                   <p className="text-xs text-slate-600 mb-2">
-                    Required headers: <span className="font-semibold">f</span> (first name),{' '}
-                    <span className="font-semibold">l</span> (last name)
+                    Required headers: <span className="font-semibold">f</span> (first name)
                   </p>
                   <p className="text-xs text-slate-600 mb-2">
-                    Optional headers: <span className="font-semibold">m</span> (middle name),{' '}
+                    Optional headers: <span className="font-semibold">l</span> (last name),{' '}
+                    <span className="font-semibold">m</span> (middle name),{' '}
                     <span className="font-semibold">dob</span> (date of birth),{' '}
                     <span className="font-semibold">d</span> (domain)
                   </p>

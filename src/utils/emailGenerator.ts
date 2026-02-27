@@ -9,6 +9,16 @@
 const clean = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const uniqueAll = (emails: string[]) => Array.from(new Set(emails));
+const hasInvalidSeparators = (localPart: string) =>
+  /[._-]{2,}/.test(localPart) || /^[._-]/.test(localPart) || /[._-]$/.test(localPart);
+
+const normalizeEmails = (emails: string[]) =>
+  uniqueAll(emails).filter((email) => {
+    const [localPart, domainPart] = email.split('@');
+    if (!localPart || !domainPart) return false;
+    if (hasInvalidSeparators(localPart)) return false;
+    return true;
+  });
 
 const extractDobParts = (dateOfBirth: string | undefined) => {
   if (!dateOfBirth) return [] as string[];
@@ -108,7 +118,7 @@ export const generateMiddleNameEmails = (firstName: string, middleName: string |
     `${fi}${m}${l}@${d}`,
   ];
 
-  return uniqueAll(emails);
+  return normalizeEmails(emails);
 };
 
 /**
@@ -149,7 +159,7 @@ export const generateInitialBasedEmails = (firstName: string, middleName: string
     `${fi}.${li}@${d}`, // f.l
   ];
 
-  return uniqueAll(emails);
+  return normalizeEmails(emails);
 };
 
 /**
@@ -206,7 +216,7 @@ export const generateTier2Emails = (
     emails.push(`${l}${token}@${d}`);
   });
 
-  return uniqueAll(emails);
+  return normalizeEmails(emails);
 };
 
 /**
@@ -243,5 +253,5 @@ export const generateTier3ShortNumberEmails = (
     emails.push(`${f}_${l}${token}@${d}`);
   });
 
-  return uniqueAll(emails);
+  return normalizeEmails(emails);
 };

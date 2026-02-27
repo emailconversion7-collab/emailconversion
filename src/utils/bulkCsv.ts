@@ -21,6 +21,14 @@ export interface ParsedBulkInput {
     email: number;
   };
 }
+export interface ColumnMappingSelection {
+  firstName?: number;
+  middleName?: number;
+  lastName?: number;
+  dateOfBirth?: number;
+  domain?: number;
+  email?: number;
+}
 
 const normalizeHeader = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 const sanitizeCell = (value: string) => value.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -72,7 +80,11 @@ const escapeCsv = (value: string) => {
   return value;
 };
 
-export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): ParsedBulkInput => {
+export const parseBulkInputCsv = (
+  csvText: string,
+  fallbackDomain: string,
+  selectedMapping?: ColumnMappingSelection
+): ParsedBulkInput => {
   const lines = csvText
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -142,7 +154,19 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
     )
   );
 
-  if (firstNameIndex === -1) {
+  const resolveMappedIndex = (selectedIndex: number | undefined, autoIndex: number) => {
+    if (selectedIndex === undefined || selectedIndex < 0) return autoIndex;
+    return selectedIndex;
+  };
+
+  const mappedFirstNameIndex = resolveMappedIndex(selectedMapping?.firstName, firstNameIndex);
+  const mappedMiddleNameIndex = resolveMappedIndex(selectedMapping?.middleName, middleNameIndex);
+  const mappedLastNameIndex = resolveMappedIndex(selectedMapping?.lastName, lastNameIndex);
+  const mappedDateOfBirthIndex = resolveMappedIndex(selectedMapping?.dateOfBirth, dateOfBirthIndex);
+  const mappedDomainIndex = resolveMappedIndex(selectedMapping?.domain, domainIndex);
+  const mappedEmailIndex = resolveMappedIndex(selectedMapping?.email, emailIndex);
+
+  if (mappedFirstNameIndex === -1) {
     throw new Error('CSV headers must include a First Name column.');
   }
 
@@ -151,12 +175,12 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
   rawRowValues.forEach((rawValues) => {
     const values = keepIndexes.map((index) => sanitizeCell(rawValues[index] ?? ''));
     const sourceValues = values;
-    const firstName = values[firstNameIndex]?.trim() ?? '';
-    const middleName = middleNameIndex >= 0 ? values[middleNameIndex]?.trim() ?? '' : '';
-    const lastName = values[lastNameIndex]?.trim() ?? '';
-    const dateOfBirth = dateOfBirthIndex >= 0 ? values[dateOfBirthIndex]?.trim() ?? '' : '';
-    const explicitDomain = domainIndex >= 0 ? values[domainIndex]?.trim() : '';
-    const emailValue = emailIndex >= 0 ? values[emailIndex]?.trim() ?? '' : '';
+    const firstName = values[mappedFirstNameIndex]?.trim() ?? '';
+    const middleName = mappedMiddleNameIndex >= 0 ? values[mappedMiddleNameIndex]?.trim() ?? '' : '';
+    const lastName = mappedLastNameIndex >= 0 ? values[mappedLastNameIndex]?.trim() ?? '' : '';
+    const dateOfBirth = mappedDateOfBirthIndex >= 0 ? values[mappedDateOfBirthIndex]?.trim() ?? '' : '';
+    const explicitDomain = mappedDomainIndex >= 0 ? values[mappedDomainIndex]?.trim() : '';
+    const emailValue = mappedEmailIndex >= 0 ? values[mappedEmailIndex]?.trim() ?? '' : '';
     const emailDomain = emailValue.includes('@') ? emailValue.split('@').pop()?.trim() ?? '' : '';
     const domain = explicitDomain || emailDomain || fallbackDomain;
 
@@ -173,12 +197,12 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
     rows,
     sourceHeaders,
     mapping: {
-      firstName: firstNameIndex,
-      middleName: middleNameIndex,
-      lastName: lastNameIndex,
-      dateOfBirth: dateOfBirthIndex,
-      domain: domainIndex,
-      email: emailIndex,
+      firstName: mappedFirstNameIndex,
+      middleName: mappedMiddleNameIndex,
+      lastName: mappedLastNameIndex,
+      dateOfBirth: mappedDateOfBirthIndex,
+      domain: mappedDomainIndex,
+      email: mappedEmailIndex,
     },
   };
 };

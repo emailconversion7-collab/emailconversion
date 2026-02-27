@@ -6,6 +6,7 @@ import { PatternSection } from '../components/PatternSection';
 import {
   buildBulkOutputCsv,
   buildBulkSectionOutputCsv,
+  type ColumnMappingSelection,
   parseBulkInputCsv,
   type BulkInputRow,
   type GeneratedSections,
@@ -87,6 +88,16 @@ const getMappedLabel = (headers: string[], index: number) => {
   return header || `column_${index + 1}`;
 };
 
+const toSelectedMapping = (
+  mapping: { firstName: number; middleName: number; lastName: number; dateOfBirth: number; domain: number; email: number }
+): ColumnMappingSelection => ({
+  firstName: mapping.firstName >= 0 ? mapping.firstName : undefined,
+  middleName: mapping.middleName >= 0 ? mapping.middleName : undefined,
+  lastName: mapping.lastName >= 0 ? mapping.lastName : undefined,
+  dateOfBirth: mapping.dateOfBirth >= 0 ? mapping.dateOfBirth : undefined,
+  domain: mapping.domain >= 0 ? mapping.domain : undefined,
+});
+
 const useInputs = () => {
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -126,6 +137,15 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkError, setBulkError] = useState('');
   const [bulkDownloads, setBulkDownloads] = useState<BulkDownloads | null>(null);
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkHeaders, setBulkHeaders] = useState<string[]>([]);
+  const [bulkMapping, setBulkMapping] = useState<ColumnMappingSelection>({
+    firstName: undefined,
+    middleName: undefined,
+    lastName: undefined,
+    dateOfBirth: undefined,
+    domain: undefined,
+  });
   const inputs = useInputs();
 
   const shownPatterns = only ? patterns.filter((p) => p.key === only) : patterns;
@@ -152,6 +172,50 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
     downloadCsv(csv, `emails_${suffix}_${inputs.firstName.toLowerCase()}_${inputs.lastName.toLowerCase()}.csv`);
   };
 
+  const generateBulkFromMapping = (csvText: string, selectedMapping: ColumnMappingSelection) => {
+    const { rows: inputRows, sourceHeaders, mapping } = parseBulkInputCsv(
+      csvText,
+      bulkFallbackDomain.trim().toLowerCase() || 'gmail.com',
+      selectedMapping
+    );
+
+    const counts: BulkDownloads['counts'] = {
+      all: 0,
+      middleName: 0,
+      initialBased: 0,
+      tier2: 0,
+      tier3: 0,
+    };
+    const sectionCsv: Partial<Record<PatternKey, string>> = {};
+
+    inputRows.forEach((row) => {
+      const generatedForRow = buildGeneratorOutput(row);
+      shownPatterns.forEach((pattern) => {
+        counts[pattern.key] += generatedForRow[pattern.key].length;
+        counts.all += generatedForRow[pattern.key].length;
+      });
+    });
+
+    shownPatterns.forEach((pattern) => {
+      sectionCsv[pattern.key] = buildBulkSectionOutputCsv(inputRows, sourceHeaders, buildGeneratorOutput, pattern.key, pattern.section);
+    });
+
+    setBulkDownloads({
+      all: buildBulkOutputCsv(
+        inputRows,
+        sourceHeaders,
+        buildGeneratorOutput,
+        shownPatterns.map((pattern) => pattern.key)
+      ),
+      sectionCsv,
+      counts,
+      rowCount: inputRows.length,
+    });
+    setBulkStatus(
+      `Processed ${inputRows.length} row(s), generated ${counts.all} emails. Mapping: first=${getMappedLabel(sourceHeaders, mapping.firstName)}, last=${getMappedLabel(sourceHeaders, mapping.lastName)}, middle=${getMappedLabel(sourceHeaders, mapping.middleName)}, dob=${getMappedLabel(sourceHeaders, mapping.dateOfBirth)}, domain=${getMappedLabel(sourceHeaders, mapping.domain)}.`
+    );
+  };
+
   const handleBulkFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -163,43 +227,13 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
 
     try {
       const text = await file.text();
-      const { rows: inputRows, sourceHeaders, mapping } = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
+      const parsed = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
+      const selectedMapping = toSelectedMapping(parsed.mapping);
 
-      const counts: BulkDownloads['counts'] = {
-        all: 0,
-        middleName: 0,
-        initialBased: 0,
-        tier2: 0,
-        tier3: 0,
-      };
-      const sectionCsv: Partial<Record<PatternKey, string>> = {};
-
-      inputRows.forEach((row) => {
-        const generatedForRow = buildGeneratorOutput(row);
-        shownPatterns.forEach((pattern) => {
-          counts[pattern.key] += generatedForRow[pattern.key].length;
-          counts.all += generatedForRow[pattern.key].length;
-        });
-      });
-
-      shownPatterns.forEach((pattern) => {
-        sectionCsv[pattern.key] = buildBulkSectionOutputCsv(inputRows, sourceHeaders, buildGeneratorOutput, pattern.key, pattern.section);
-      });
-
-      setBulkDownloads({
-        all: buildBulkOutputCsv(
-          inputRows,
-          sourceHeaders,
-          buildGeneratorOutput,
-          shownPatterns.map((pattern) => pattern.key)
-        ),
-        sectionCsv,
-        counts,
-        rowCount: inputRows.length,
-      });
-      setBulkStatus(
-        `Processed ${inputRows.length} row(s), generated ${counts.all} emails. Mapping: first=${getMappedLabel(sourceHeaders, mapping.firstName)}, last=${getMappedLabel(sourceHeaders, mapping.lastName)}, middle=${getMappedLabel(sourceHeaders, mapping.middleName)}, dob=${getMappedLabel(sourceHeaders, mapping.dateOfBirth)}, domain=${getMappedLabel(sourceHeaders, mapping.domain)}.`
-      );
+      setBulkCsvText(text);
+      setBulkHeaders(parsed.sourceHeaders);
+      setBulkMapping(selectedMapping);
+      setBulkStatus('File uploaded. Review mapping and click Generate.');
     } catch (error) {
       setBulkError(error instanceof Error ? error.message : 'Failed to process CSV file.');
     } finally {
@@ -250,8 +284,16 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                 value={bulkFallbackDomain}
                 onChange={(e) => setBulkFallbackDomain(e.target.value)}
                 placeholder="gmail.com"
+                list="domain-examples"
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
               />
+              <datalist id="domain-examples">
+                <option value="gmail.com" />
+                <option value="yahoo.com" />
+                <option value="outlook.com" />
+                <option value="hotmail.com" />
+                <option value="icloud.com" />
+              </datalist>
               <p className="text-xs text-slate-500 leading-relaxed mt-3 mb-3">
                 Upload CSV with headers: First Name/F/fname (required), Middle Name/M (optional), Last Name/L/lname (optional), Date of Birth/DOB (optional), Domain/D (optional if fallback is set).
               </p>
@@ -267,6 +309,79 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
               )}
               {bulkStatus && <p className="text-xs text-emerald-700 mt-2 ml-1">{bulkStatus}</p>}
               {bulkError && <p className="text-xs text-rose-600 mt-2 ml-1">{bulkError}</p>}
+
+              {bulkHeaders.length > 0 && (
+                <div className="mt-4 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Map Columns</p>
+                  <div className="space-y-2">
+                    <select
+                      value={bulkMapping.firstName ?? ''}
+                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, firstName: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    >
+                      <option value="">First Name (f) Required</option>
+                      {bulkHeaders.map((header, index) => (
+                        <option key={`first-${header}-${index}`} value={index}>{header}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={bulkMapping.middleName ?? ''}
+                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, middleName: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    >
+                      <option value="">Middle Name (m) Optional</option>
+                      {bulkHeaders.map((header, index) => (
+                        <option key={`middle-${header}-${index}`} value={index}>{header}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={bulkMapping.lastName ?? ''}
+                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, lastName: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    >
+                      <option value="">Last Name (l) Optional</option>
+                      {bulkHeaders.map((header, index) => (
+                        <option key={`last-${header}-${index}`} value={index}>{header}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={bulkMapping.dateOfBirth ?? ''}
+                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, dateOfBirth: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    >
+                      <option value="">Date Of Birth (Optional)</option>
+                      {bulkHeaders.map((header, index) => (
+                        <option key={`dob-${header}-${index}`} value={index}>{header}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={bulkMapping.domain ?? ''}
+                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, domain: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
+                    >
+                      <option value="">Domain (Optional)</option>
+                      {bulkHeaders.map((header, index) => (
+                        <option key={`domain-${header}-${index}`} value={index}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!bulkMapping.firstName) {
+                        setBulkError('Please select the First Name column.');
+                        return;
+                      }
+                      setBulkError('');
+                      setBulkDownloads(null);
+                      generateBulkFromMapping(bulkCsvText, bulkMapping);
+                    }}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all active:scale-95"
+                  >
+                    Generate With Mapping
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

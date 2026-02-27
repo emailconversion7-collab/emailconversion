@@ -141,7 +141,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
       generated[pattern.key].forEach((email) => rows.push([email, pattern.section]));
     });
 
-    const csv = rows.map((row) => row.join(',')).join('\n');
+    const csv = rows.map((row) => row.join(',')).join('\r\n');
     const suffix = only ?? 'all';
     downloadCsv(csv, `emails_${suffix}_${inputs.firstName.toLowerCase()}_${inputs.lastName.toLowerCase()}.csv`);
   };

@@ -176,7 +176,7 @@ export const buildBulkOutputCsv = (
     });
   });
 
-  return outputRows.map((line) => line.map(escapeCsv).join(',')).join('\n');
+  return outputRows.map((line) => line.map(escapeCsv).join(',')).join('\r\n');
 };
 
 export const buildBulkSectionOutputCsv = (
@@ -195,5 +195,5 @@ export const buildBulkSectionOutputCsv = (
     });
   });
 
-  return outputRows.map((line) => line.map(escapeCsv).join(',')).join('\n');
+  return outputRows.map((line) => line.map(escapeCsv).join(',')).join('\r\n');
 };

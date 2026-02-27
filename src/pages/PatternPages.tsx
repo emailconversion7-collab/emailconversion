@@ -4,6 +4,7 @@ import { type DomainOption } from '../config/domains';
 import { ManualInputPanel } from '../components/ManualInputPanel';
 import { PatternSection } from '../components/PatternSection';
 import {
+  buildBulkOutputCsv,
   buildBulkSectionOutputCsv,
   parseBulkInputCsv,
   type BulkInputRow,
@@ -76,14 +77,15 @@ const patterns: PatternMeta[] = [
 const buildGeneratorOutput = (row: BulkInputRow): GeneratedSections => ({
   middleName: generateMiddleNameEmails(row.firstName, row.middleName, row.lastName, row.domain),
   initialBased: generateInitialBasedEmails(row.firstName, row.middleName, row.lastName, row.domain),
-  tier2: generateTier2Emails(row.firstName, row.middleName, row.lastName, row.domain),
-  tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain),
+  tier2: generateTier2Emails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
+  tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
 });
 
 const useInputs = () => {
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainOption>('gmail.com');
   const [customDomain, setCustomDomain] = useState('');
   const [domain, setDomain] = useState('');
@@ -97,12 +99,14 @@ const useInputs = () => {
     firstName,
     middleName,
     lastName,
+    dateOfBirth,
     selectedDomain,
     customDomain,
     domain,
     setFirstName,
     setMiddleName,
     setLastName,
+    setDateOfBirth,
     setSelectedDomain,
     setCustomDomain,
     applyDomain,
@@ -121,11 +125,11 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
   const shownPatterns = only ? patterns.filter((p) => p.key === only) : patterns;
 
   const generated = useMemo(() => {
-    const { firstName, middleName, lastName, domain } = inputs;
+    const { firstName, middleName, lastName, domain, dateOfBirth } = inputs;
     if (!firstName || !lastName || !domain) return null;
 
-    return buildGeneratorOutput({ firstName, middleName, lastName, domain });
-  }, [inputs.firstName, inputs.middleName, inputs.lastName, inputs.domain]);
+    return buildGeneratorOutput({ firstName, middleName, lastName, domain, dateOfBirth });
+  }, [inputs.firstName, inputs.middleName, inputs.lastName, inputs.domain, inputs.dateOfBirth]);
 
   const totalCount = shownPatterns.reduce((acc, pattern) => acc + (generated?.[pattern.key].length ?? 0), 0);
 
@@ -153,9 +157,8 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
 
     try {
       const text = await file.text();
-      const inputRows = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
+      const { rows: inputRows, sourceHeaders } = parseBulkInputCsv(text, bulkFallbackDomain.trim().toLowerCase() || 'gmail.com');
 
-      const outputRows: string[][] = [['first_name', 'middle_name', 'last_name', 'domain', 'email', 'pattern_type']];
       const counts: BulkDownloads['counts'] = {
         all: 0,
         middleName: 0,
@@ -168,20 +171,22 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
       inputRows.forEach((row) => {
         const generatedForRow = buildGeneratorOutput(row);
         shownPatterns.forEach((pattern) => {
-          generatedForRow[pattern.key].forEach((email) => {
-            outputRows.push([row.firstName, row.middleName, row.lastName, row.domain, email, pattern.section]);
-          });
           counts[pattern.key] += generatedForRow[pattern.key].length;
           counts.all += generatedForRow[pattern.key].length;
         });
       });
 
       shownPatterns.forEach((pattern) => {
-        sectionCsv[pattern.key] = buildBulkSectionOutputCsv(inputRows, buildGeneratorOutput, pattern.key, pattern.section);
+        sectionCsv[pattern.key] = buildBulkSectionOutputCsv(inputRows, sourceHeaders, buildGeneratorOutput, pattern.key, pattern.section);
       });
 
       setBulkDownloads({
-        all: outputRows.map((line) => line.join(',')).join('\n'),
+        all: buildBulkOutputCsv(
+          inputRows,
+          sourceHeaders,
+          buildGeneratorOutput,
+          shownPatterns.map((pattern) => pattern.key)
+        ),
         sectionCsv,
         counts,
         rowCount: inputRows.length,
@@ -240,7 +245,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
               />
               <p className="text-xs text-slate-500 leading-relaxed mt-3 mb-3">
-                Upload CSV with headers: First Name/F/fname, Middle Name/M (optional), Last Name/L/lname, Domain/D (optional).
+                Upload CSV with headers: First Name/F/fname, Middle Name/M (optional), Last Name/L/lname, Date of Birth/DOB (optional), Domain/D (optional).
               </p>
               <label className="w-full inline-flex items-center justify-center px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer transition-all">
                 <Upload className="w-4 h-4 mr-2" />
@@ -320,12 +325,13 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                   </p>
                   <p className="text-xs text-slate-600 mb-2">
                     Optional headers: <span className="font-semibold">m</span> (middle name),{' '}
+                    <span className="font-semibold">dob</span> (date of birth),{' '}
                     <span className="font-semibold">d</span> (domain)
                   </p>
                   <pre className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-3 overflow-x-auto">
-f,m,l,d{`\n`}
-rahul,kumar,sharma,gmail.com{`\n`}
-riya,,kapoor,yahoo.com
+f,m,l,dob,d{`\n`}
+rahul,kumar,sharma,1996-04-17,gmail.com{`\n`}
+riya,,kapoor,,yahoo.com
                   </pre>
                 </div>
               )}

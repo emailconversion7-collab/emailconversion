@@ -10,6 +10,64 @@ const clean = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const uniqueAll = (emails: string[]) => Array.from(new Set(emails));
 
+const extractDobParts = (dateOfBirth: string | undefined) => {
+  if (!dateOfBirth) return [] as string[];
+
+  const digits = dateOfBirth.replace(/\D/g, '');
+  if (digits.length !== 8) return [] as string[];
+
+  let year = '';
+  let month = '';
+  let day = '';
+
+  if (/^\d{4}/.test(digits)) {
+    year = digits.slice(0, 4);
+    month = digits.slice(4, 6);
+    day = digits.slice(6, 8);
+  } else {
+    day = digits.slice(0, 2);
+    month = digits.slice(2, 4);
+    year = digits.slice(4, 8);
+  }
+
+  const yy = year.slice(2);
+  const y = year.slice(3);
+  const ddmm = `${day}${month}`;
+  const mmdd = `${month}${day}`;
+  const ddmmyy = `${day}${month}${yy}`;
+  const mmddyy = `${month}${day}${yy}`;
+  const yyyymmdd = `${year}${month}${day}`;
+  const ddmmyyyy = `${day}${month}${year}`;
+  const mdyy = `${month}${day}${yy}`;
+  const dmyy = `${day}${month}${yy}`;
+  const dayNoZero = String(Number(day));
+  const monthNoZero = String(Number(month));
+  const dmNoZero = `${dayNoZero}${monthNoZero}`;
+  const mdNoZero = `${monthNoZero}${dayNoZero}`;
+  const mmyy = `${month}${yy}`;
+  const ddyy = `${day}${yy}`;
+
+  return uniqueAll([
+    year,
+    yy,
+    y,
+    day,
+    month,
+    ddmm,
+    mmdd,
+    ddmmyy,
+    mmddyy,
+    yyyymmdd,
+    ddmmyyyy,
+    mdyy,
+    dmyy,
+    dmNoZero,
+    mdNoZero,
+    mmyy,
+    ddyy,
+  ]).filter(Boolean);
+};
+
 /**
  * PATTERN 1: 🔹 Middle Name Included
  * Probability: Medium
@@ -100,10 +158,17 @@ export const generateInitialBasedEmails = (firstName: string, middleName: string
  * Generate combinations like:
  * firstname.lastname@domain, firstname_lastname@domain, firstname-lastname@domain, lastname.firstname@domain
  */
-export const generateTier2Emails = (firstName: string, middleName: string | undefined, lastName: string, domain: string): string[] => {
+export const generateTier2Emails = (
+  firstName: string,
+  middleName: string | undefined,
+  lastName: string,
+  domain: string,
+  dateOfBirth?: string
+): string[] => {
   const f = clean(firstName);
   const l = clean(lastName);
   const d = domain.toLowerCase().trim();
+  const dobTokens = extractDobParts(dateOfBirth);
 
   const emails = [
     `${f}.${l}@${d}`,
@@ -132,6 +197,15 @@ export const generateTier2Emails = (firstName: string, middleName: string | unde
     `${l}.${f}01@${d}`,
   ];
 
+  dobTokens.forEach((token) => {
+    emails.push(`${f}.${l}${token}@${d}`);
+    emails.push(`${f}_${l}${token}@${d}`);
+    emails.push(`${f}-${l}${token}@${d}`);
+    emails.push(`${f}${l}${token}@${d}`);
+    emails.push(`${f}${token}@${d}`);
+    emails.push(`${l}${token}@${d}`);
+  });
+
   return uniqueAll(emails);
 };
 
@@ -140,11 +214,18 @@ export const generateTier2Emails = (firstName: string, middleName: string | unde
  * Probability: Medium-High (Personal accounts)
  * Use numbers 1 to 10.
  */
-export const generateTier3ShortNumberEmails = (firstName: string, middleName: string | undefined, lastName: string, domain: string): string[] => {
+export const generateTier3ShortNumberEmails = (
+  firstName: string,
+  middleName: string | undefined,
+  lastName: string,
+  domain: string,
+  dateOfBirth?: string
+): string[] => {
   const f = clean(firstName);
   const l = clean(lastName);
   const d = domain.toLowerCase().trim();
   const fi = f[0] ?? '';
+  const dobTokens = extractDobParts(dateOfBirth);
 
   const emails: string[] = [];
 
@@ -154,6 +235,13 @@ export const generateTier3ShortNumberEmails = (firstName: string, middleName: st
     emails.push(`${fi}.${l}${i}@${d}`);
     emails.push(`${f}_${l}${i}@${d}`);
   }
+
+  dobTokens.forEach((token) => {
+    emails.push(`${f}${token}@${d}`);
+    emails.push(`${f}.${l}${token}@${d}`);
+    emails.push(`${fi}.${l}${token}@${d}`);
+    emails.push(`${f}_${l}${token}@${d}`);
+  });
 
   return uniqueAll(emails);
 };

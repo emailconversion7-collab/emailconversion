@@ -1,16 +1,18 @@
-import { Globe, User } from 'lucide-react';
+import { CalendarDays, Globe, User } from 'lucide-react';
 import { DOMAIN_OPTIONS, type DomainOption } from '../config/domains';
 
 interface ManualInputPanelProps {
   firstName: string;
   middleName: string;
   lastName: string;
+  dateOfBirth: string;
   selectedDomain: DomainOption;
   customDomain: string;
   domain: string;
   setFirstName: (value: string) => void;
   setMiddleName: (value: string) => void;
   setLastName: (value: string) => void;
+  setDateOfBirth: (value: string) => void;
   setSelectedDomain: (value: DomainOption) => void;
   setCustomDomain: (value: string) => void;
   applyDomain: () => void;
@@ -20,12 +22,14 @@ export const ManualInputPanel = ({
   firstName,
   middleName,
   lastName,
+  dateOfBirth,
   selectedDomain,
   customDomain,
   domain,
   setFirstName,
   setMiddleName,
   setLastName,
+  setDateOfBirth,
   setSelectedDomain,
   setCustomDomain,
   applyDomain,
@@ -71,6 +75,21 @@ export const ManualInputPanel = ({
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="e.g. Sharma"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">
+          Date Of Birth (Optional)
+        </label>
+        <div className="relative">
+          <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 opacity-70" />
+          <input
+            type="date"
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
           />
         </div>

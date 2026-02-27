@@ -38,8 +38,8 @@ export const BulkCsvPage = () => {
   const generateForRow = (row: BulkInputRow) => ({
     middleName: generateMiddleNameEmails(row.firstName, row.middleName, row.lastName, row.domain),
     initialBased: generateInitialBasedEmails(row.firstName, row.middleName, row.lastName, row.domain),
-    tier2: generateTier2Emails(row.firstName, row.middleName, row.lastName, row.domain),
-    tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain),
+    tier2: generateTier2Emails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
+    tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
   });
 
   const handleBulkFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -53,12 +53,12 @@ export const BulkCsvPage = () => {
 
     try {
       const text = await file.text();
-      const inputRows = parseBulkInputCsv(text, domain);
-      const all = buildBulkOutputCsv(inputRows, generateForRow);
-      const middleNameCsv = buildBulkSectionOutputCsv(inputRows, generateForRow, 'middleName', 'Middle Name');
-      const initialBasedCsv = buildBulkSectionOutputCsv(inputRows, generateForRow, 'initialBased', 'Initial Based');
-      const tier2Csv = buildBulkSectionOutputCsv(inputRows, generateForRow, 'tier2', 'Common Human Choice');
-      const tier3Csv = buildBulkSectionOutputCsv(inputRows, generateForRow, 'tier3', 'Short Number');
+      const { rows: inputRows, sourceHeaders } = parseBulkInputCsv(text, domain);
+      const all = buildBulkOutputCsv(inputRows, sourceHeaders, generateForRow);
+      const middleNameCsv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'middleName', 'Middle Name');
+      const initialBasedCsv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'initialBased', 'Initial Based');
+      const tier2Csv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'tier2', 'Common Human Choice');
+      const tier3Csv = buildBulkSectionOutputCsv(inputRows, sourceHeaders, generateForRow, 'tier3', 'Short Number');
       const counts = inputRows.reduce(
         (acc, row) => {
           const generated = generateForRow(row);

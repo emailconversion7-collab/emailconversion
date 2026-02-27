@@ -97,9 +97,9 @@ export const parseBulkInputCsv = (
   const delimiter = pickDelimiter(lines[0]);
   const rawHeaders = parseCsvLine(lines[0], delimiter).map((header) => sanitizeCell(header));
   const rawRowValues = lines.slice(1).map((line) => parseCsvLine(line, delimiter));
-  const maxColumnCount = Math.max(
-    rawHeaders.length,
-    ...rawRowValues.map((values) => values.length)
+  const maxColumnCount = rawRowValues.reduce(
+    (max, values) => (values.length > max ? values.length : max),
+    rawHeaders.length
   );
 
   const keepIndexes: number[] = [];

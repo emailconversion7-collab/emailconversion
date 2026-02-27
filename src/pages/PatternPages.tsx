@@ -40,6 +40,13 @@ type BulkDownloads = {
   rowCount: number;
 };
 
+const getBulkOutputBaseName = (fileName: string) => {
+  const trimmed = fileName.trim();
+  if (!trimmed) return 'output';
+  const dotIndex = trimmed.lastIndexOf('.');
+  return dotIndex > 0 ? trimmed.slice(0, dotIndex) : trimmed;
+};
+
 const patterns: PatternMeta[] = [
   {
     key: 'middleName',
@@ -137,6 +144,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
     domain: undefined,
   });
   const inputs = useInputs();
+  const outputBaseName = getBulkOutputBaseName(bulkFileName);
 
   const shownPatterns = only ? patterns.filter((p) => p.key === only) : patterns;
 
@@ -473,7 +481,10 @@ riya,,kapoor,,yahoo.com
                       type="button"
                       onClick={() =>
                         bulkDownloads.sectionCsv[pattern.key] &&
-                        downloadCsv(bulkDownloads.sectionCsv[pattern.key]!, `bulk_${pattern.key}_${Date.now()}.csv`)
+                        downloadCsv(
+                          bulkDownloads.sectionCsv[pattern.key]!,
+                          `${outputBaseName} ${bulkDownloads.counts[pattern.key]} emails ${pattern.key}.csv`
+                        )
                       }
                       disabled={!bulkDownloads.counts[pattern.key]}
                       className="rounded-xl border border-slate-300 p-4 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -486,7 +497,7 @@ riya,,kapoor,,yahoo.com
 
                 <button
                   type="button"
-                  onClick={() => downloadCsv(bulkDownloads.all, `bulk_selected_patterns_${Date.now()}.csv`)}
+                  onClick={() => downloadCsv(bulkDownloads.all, `${outputBaseName} ${bulkDownloads.counts.all} emails.csv`)}
                   className="mt-4 w-full py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
                 >
                   Download All Variations ({bulkDownloads.counts.all})

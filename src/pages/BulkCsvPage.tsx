@@ -14,6 +14,13 @@ import {
   generateTier3ShortNumberEmails,
 } from '../utils/emailGenerator';
 
+const getBulkOutputBaseName = (fileName: string) => {
+  const trimmed = fileName.trim();
+  if (!trimmed) return 'output';
+  const dotIndex = trimmed.lastIndexOf('.');
+  return dotIndex > 0 ? trimmed.slice(0, dotIndex) : trimmed;
+};
+
 export const BulkCsvPage = () => {
   const [domain, setDomain] = useState('gmail.com');
   const [bulkFileName, setBulkFileName] = useState('');
@@ -34,6 +41,7 @@ export const BulkCsvPage = () => {
     };
     rowCount: number;
   } | null>(null);
+  const outputBaseName = getBulkOutputBaseName(bulkFileName);
 
   const getMappedLabel = (headers: string[], index: number) => {
     if (index < 0) return 'Not mapped';
@@ -187,7 +195,7 @@ riya,,,,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => downloadCsv(bulkDownloads.middleName, `bulk_middle_name_${Date.now()}.csv`)}
+                onClick={() => downloadCsv(bulkDownloads.middleName, `${outputBaseName} ${bulkDownloads.counts.middleName} emails middle-name.csv`)}
                 disabled={bulkDownloads.counts.middleName === 0}
                 className="rounded-xl border border-slate-300 p-4 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -197,7 +205,7 @@ riya,,,,
 
               <button
                 type="button"
-                onClick={() => downloadCsv(bulkDownloads.initialBased, `bulk_initial_based_${Date.now()}.csv`)}
+                onClick={() => downloadCsv(bulkDownloads.initialBased, `${outputBaseName} ${bulkDownloads.counts.initialBased} emails initial-based.csv`)}
                 disabled={bulkDownloads.counts.initialBased === 0}
                 className="rounded-xl border border-slate-300 p-4 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -207,7 +215,7 @@ riya,,,,
 
               <button
                 type="button"
-                onClick={() => downloadCsv(bulkDownloads.tier2, `bulk_common_human_choice_${Date.now()}.csv`)}
+                onClick={() => downloadCsv(bulkDownloads.tier2, `${outputBaseName} ${bulkDownloads.counts.tier2} emails common-human-choice.csv`)}
                 disabled={bulkDownloads.counts.tier2 === 0}
                 className="rounded-xl border border-slate-300 p-4 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -217,7 +225,7 @@ riya,,,,
 
               <button
                 type="button"
-                onClick={() => downloadCsv(bulkDownloads.tier3, `bulk_short_number_${Date.now()}.csv`)}
+                onClick={() => downloadCsv(bulkDownloads.tier3, `${outputBaseName} ${bulkDownloads.counts.tier3} emails short-number.csv`)}
                 disabled={bulkDownloads.counts.tier3 === 0}
                 className="rounded-xl border border-slate-300 p-4 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -228,7 +236,7 @@ riya,,,,
 
             <button
               type="button"
-              onClick={() => downloadCsv(bulkDownloads.all, `bulk_all_patterns_${Date.now()}.csv`)}
+              onClick={() => downloadCsv(bulkDownloads.all, `${outputBaseName} ${bulkDownloads.counts.all} emails.csv`)}
               className="mt-4 w-full py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
             >
               Download All Variations ({bulkDownloads.counts.all})

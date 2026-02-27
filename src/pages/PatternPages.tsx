@@ -89,6 +89,9 @@ const buildGeneratorOutput = (row: BulkInputRow): GeneratedSections => ({
   tier3: generateTier3ShortNumberEmails(row.firstName, row.middleName, row.lastName, row.domain, row.dateOfBirth),
 });
 
+const patternUsesMiddleName = (key: PatternKey) => key === 'middleName';
+const patternUsesDateOfBirth = (key: PatternKey) => key === 'tier2';
+
 const getMappedLabel = (headers: string[], index: number) => {
   if (index < 0) return 'Not mapped';
   const header = headers[index]?.trim() ?? '';
@@ -147,6 +150,8 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
   const outputBaseName = getBulkOutputBaseName(bulkFileName);
 
   const shownPatterns = only ? patterns.filter((p) => p.key === only) : patterns;
+  const shouldShowMiddleName = shownPatterns.some((pattern) => patternUsesMiddleName(pattern.key));
+  const shouldShowDateOfBirth = shownPatterns.some((pattern) => patternUsesDateOfBirth(pattern.key));
 
   const generated = useMemo(() => {
     const { firstName, middleName, lastName, domain, dateOfBirth } = inputs;
@@ -276,7 +281,7 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
           </div>
 
           {inputMode === 'manual' ? (
-            <ManualInputPanel {...inputs} />
+            <ManualInputPanel {...inputs} showMiddleName={shouldShowMiddleName} showDateOfBirth={shouldShowDateOfBirth} />
           ) : (
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">
@@ -327,16 +332,20 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                         <option key={`first-${header}-${index}`} value={index}>{header}</option>
                       ))}
                     </select>
-                    <select
-                      value={bulkMapping.middleName ?? ''}
-                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, middleName: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    >
-                      <option value="">Middle Name (m) Optional</option>
-                      {bulkHeaders.map((header, index) => (
-                        <option key={`middle-${header}-${index}`} value={index}>{header}</option>
-                      ))}
-                    </select>
+                    <div className={!shouldShowMiddleName ? 'opacity-70' : ''}>
+                      <select
+                        value={bulkMapping.middleName ?? ''}
+                        onChange={(e) => setBulkMapping((prev) => ({ ...prev, middleName: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                        disabled={!shouldShowMiddleName}
+                        className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg disabled:cursor-not-allowed disabled:bg-slate-100"
+                      >
+                        <option value="">Middle Name (m) Optional</option>
+                        {bulkHeaders.map((header, index) => (
+                          <option key={`middle-${header}-${index}`} value={index}>{header}</option>
+                        ))}
+                      </select>
+                      {!shouldShowMiddleName && <p className="mt-1 text-[11px] text-slate-500">Not used for this page.</p>}
+                    </div>
                     <select
                       value={bulkMapping.lastName ?? ''}
                       onChange={(e) => setBulkMapping((prev) => ({ ...prev, lastName: e.target.value === '' ? undefined : Number(e.target.value) }))}
@@ -347,16 +356,20 @@ const PatternPage = ({ only }: { only?: PatternKey }) => {
                         <option key={`last-${header}-${index}`} value={index}>{header}</option>
                       ))}
                     </select>
-                    <select
-                      value={bulkMapping.dateOfBirth ?? ''}
-                      onChange={(e) => setBulkMapping((prev) => ({ ...prev, dateOfBirth: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                      className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
-                    >
-                      <option value="">Date Of Birth (Optional)</option>
-                      {bulkHeaders.map((header, index) => (
-                        <option key={`dob-${header}-${index}`} value={index}>{header}</option>
-                      ))}
-                    </select>
+                    <div className={!shouldShowDateOfBirth ? 'opacity-70' : ''}>
+                      <select
+                        value={bulkMapping.dateOfBirth ?? ''}
+                        onChange={(e) => setBulkMapping((prev) => ({ ...prev, dateOfBirth: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                        disabled={!shouldShowDateOfBirth}
+                        className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg disabled:cursor-not-allowed disabled:bg-slate-100"
+                      >
+                        <option value="">Date Of Birth (Optional)</option>
+                        {bulkHeaders.map((header, index) => (
+                          <option key={`dob-${header}-${index}`} value={index}>{header}</option>
+                        ))}
+                      </select>
+                      {!shouldShowDateOfBirth && <p className="mt-1 text-[11px] text-slate-500">Not used for this page.</p>}
+                    </div>
                     <select
                       value={bulkMapping.domain ?? ''}
                       onChange={(e) => setBulkMapping((prev) => ({ ...prev, domain: e.target.value === '' ? undefined : Number(e.target.value) }))}

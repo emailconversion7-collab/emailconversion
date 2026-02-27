@@ -6,6 +6,8 @@ interface ManualInputPanelProps {
   middleName: string;
   lastName: string;
   dateOfBirth: string;
+  showMiddleName?: boolean;
+  showDateOfBirth?: boolean;
   selectedDomain: DomainOption;
   customDomain: string;
   domain: string;
@@ -23,6 +25,8 @@ export const ManualInputPanel = ({
   middleName,
   lastName,
   dateOfBirth,
+  showMiddleName = true,
+  showDateOfBirth = true,
   selectedDomain,
   customDomain,
   domain,
@@ -50,7 +54,7 @@ export const ManualInputPanel = ({
         </div>
       </div>
 
-      <div>
+      <div className={!showMiddleName ? 'opacity-60' : ''}>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">
           Middle Name (Optional)
         </label>
@@ -61,7 +65,8 @@ export const ManualInputPanel = ({
             value={middleName}
             onChange={(e) => setMiddleName(e.target.value)}
             placeholder="e.g. Kumar"
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+            disabled={!showMiddleName}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
       </div>
@@ -80,7 +85,7 @@ export const ManualInputPanel = ({
         </div>
       </div>
 
-      <div>
+      <div className={!showDateOfBirth ? 'opacity-60' : ''}>
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">
           Date Of Birth (Optional)
         </label>
@@ -90,7 +95,8 @@ export const ManualInputPanel = ({
             type="date"
             value={dateOfBirth}
             onChange={(e) => setDateOfBirth(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+            disabled={!showDateOfBirth}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </div>
       </div>

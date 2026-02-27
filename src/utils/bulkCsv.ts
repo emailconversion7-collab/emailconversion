@@ -93,15 +93,10 @@ export const parseBulkInputCsv = (csvText: string, fallbackDomain: string): Pars
   const keepIndexes: number[] = [];
   for (let index = 0; index < maxColumnCount; index += 1) {
     const headerValue = sanitizeCell(rawHeaders[index] ?? '');
-    const hasAnyData = rawRowValues.some((values) => sanitizeCell(values[index] ?? '') !== '');
-    if (headerValue !== '' || hasAnyData) keepIndexes.push(index);
+    if (headerValue !== '') keepIndexes.push(index);
   }
 
-  const sourceHeaders = keepIndexes.map((index) => {
-    const headerValue = sanitizeCell(rawHeaders[index] ?? '');
-    if (headerValue) return headerValue;
-    return `extra_column_${index + 1}`;
-  });
+  const sourceHeaders = keepIndexes.map((index) => sanitizeCell(rawHeaders[index] ?? ''));
   const headers = sourceHeaders.map(normalizeHeader);
 
   const firstNameIndex = headers.findIndex((h) =>
